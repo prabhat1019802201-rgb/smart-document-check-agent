@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from app.api import documents
 
 app = FastAPI(
     title="Smart Document Check Agent",
@@ -6,6 +7,7 @@ app = FastAPI(
     version="0.1.0"
 )
 
+app.include_router(documents.router)
 
 @app.get("/health")
 def health_check():
@@ -13,3 +15,4 @@ def health_check():
         "status": "ok",
         "service": "smart-document-check-agent"
     }
+
