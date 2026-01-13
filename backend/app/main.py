@@ -4,6 +4,8 @@ from app.db.session import engine
 from app.db.base import Base
 from app.models import document  # IMPORTANT: import model
 from app.models import validation
+from app.models import genai_explanation
+from app.models import *  # ensures models are registered
 
 app = FastAPI(
     title="Smart Document Check Agent",

@@ -25,8 +25,11 @@ def persist_validation_results(
     db.add(validation_result)
 
     for issue in issues:
+        issue_id = str(uuid.uuid4())
+        issue["issue_id"] = issue_id
+
         validation_issue = ValidationIssue(
-            issue_id=str(uuid.uuid4()),
+            issue_id=issue_id,
             validation_id=validation_id,
             document_id=document_id,
             issue_type=issue["issue_type"],
