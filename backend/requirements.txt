@@ -2,6 +2,8 @@ fastapi
 uvicorn
 sqlalchemy
 langgraph
+langchain
+langchain-community
 
 
 
