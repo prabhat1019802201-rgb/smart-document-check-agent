@@ -4,6 +4,7 @@ sqlalchemy
 langgraph
 langchain
 langchain-community
+pypdf
 
 
 

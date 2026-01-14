@@ -1,6 +1,5 @@
 import re
-from datetime import date
-
+from datetime import date, datetime
 
 PAN_REGEX = r"^[A-Z]{5}[0-9]{4}[A-Z]{1}$"
 
@@ -10,7 +9,7 @@ def validate_pan_card(fields: dict):
 
     pan_number = fields.get("pan_number")
     name = fields.get("name")
-    dob = fields.get("dob")
+    dob_raw = fields.get("dob")
 
     # 1. PAN format check
     if not pan_number or not re.match(PAN_REGEX, pan_number):
@@ -32,8 +31,10 @@ def validate_pan_card(fields: dict):
             "suggested_action": "Upload a PAN card where the name is clearly visible."
         })
 
-    # 3. DOB presence
-    if not dob:
+    # 3. DOB normalization + validation
+    dob = None
+
+    if not dob_raw:
         issues.append({
             "issue_type": "Missing",
             "field_name": "dob",
@@ -41,8 +42,30 @@ def validate_pan_card(fields: dict):
             "why_flagged": "Date of birth is missing on PAN card.",
             "suggested_action": "Upload a PAN card with date of birth visible."
         })
+    else:
+        if isinstance(dob_raw, date):
+            dob = dob_raw
+        elif isinstance(dob_raw, str):
+            try:
+                dob = datetime.fromisoformat(dob_raw).date()
+            except ValueError:
+                issues.append({
+                    "issue_type": "Invalid",
+                    "field_name": "dob",
+                    "severity": "High",
+                    "why_flagged": "Date of birth format is invalid.",
+                    "suggested_action": "Upload a PAN card with a valid date of birth."
+                })
+        else:
+            issues.append({
+                "issue_type": "Invalid",
+                "field_name": "dob",
+                "severity": "High",
+                "why_flagged": "Unsupported date of birth format.",
+                "suggested_action": "Upload a PAN card with readable date of birth."
+            })
 
-    # 4. Age sanity check (optional, safe)
+    # 4. Age sanity check (only if DOB parsed correctly)
     if dob:
         age = date.today().year - dob.year
         if age < 18:

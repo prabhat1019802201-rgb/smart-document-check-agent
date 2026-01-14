@@ -1,69 +1,119 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends
 from datetime import datetime
 import uuid
+import os
+from tempfile import NamedTemporaryFile
 from sqlalchemy.orm import Session
 
-from app.schemas.document import DocumentUploadResponse
 from app.db.deps import get_db
 from app.models.document import Document
-from app.services.validation_persistence import persist_validation_results
+
 from app.agents.orchestrator import build_validation_graph
+
+from app.services.validation_persistence import persist_validation_results
 from app.services.genai_explanation_persistence import persist_genai_explanations
 from app.services.historical_memory_service import store_historical_issue_pattern
+from app.services.case_document_store import (
+    persist_case_document,
+    load_case_documents
+)
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
 
-@router.post("/upload", response_model=DocumentUploadResponse)
+@router.post("/upload")
 async def upload_document(
     file: UploadFile = File(...),
     document_type: str | None = Form(default=None),
+    case_id: str | None = Form(default=None),
     db: Session = Depends(get_db)
 ):
-    # -----------------------------
-    # Step 0: Create document entry
-    # -----------------------------
+    # -------------------------------------------------
+    # Step 0: IDs
+    # -------------------------------------------------
     document_id = str(uuid.uuid4())
+    if not case_id:
+        case_id = str(uuid.uuid4())
 
+    normalized_doc_type = (
+        (document_type or "")
+        .strip()
+        .lower()
+        .replace(" ", "_")
+    )
+
+    # -------------------------------------------------
+    # Step 1: Persist document metadata
+    # -------------------------------------------------
     doc = Document(
         document_id=document_id,
-        document_type=document_type,
+        document_type=normalized_doc_type,
         file_name=file.filename,
         upload_status="UPLOADED"
     )
-
     db.add(doc)
     db.commit()
 
-    # -----------------------------
-    # Step 1–3: Run LangGraph flow
-    # -----------------------------
+    # -------------------------------------------------
+    # Step 2: Save uploaded file to disk
+    # -------------------------------------------------
+    suffix = os.path.splitext(file.filename)[-1]
+
+    with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(await file.read())
+        file_path = tmp.name
+
+    # -------------------------------------------------
+    # Step 3: Load existing case documents
+    # -------------------------------------------------
+    documents_by_type = load_case_documents(db, case_id)
+
+    # -------------------------------------------------
+    # Step 4: Run LangGraph
+    # -------------------------------------------------
     graph = build_validation_graph()
 
     initial_state = {
+        "case_id": case_id,
         "document_id": document_id,
-        "document_type": document_type,
+        "document_type": normalized_doc_type,
+
+        # ✅ CRITICAL FIX
+        "file_path": file_path,
+
         "extracted_fields": {},
-        "db": db ,
+        "documents_by_type": documents_by_type,
+
         "issues": [],
         "validation_status": "",
         "severity": "",
-        "ocr_confidence": 0.0
+        "ocr_confidence": 0.0,
+
+        "db": db
     }
 
     result_state = graph.invoke(initial_state)
-    
-    issues = result_state["issues"]
-    status = result_state["validation_status"]
-    severity = result_state["severity"]
-    ocr_confidence = result_state["ocr_confidence"]
 
-    print("DEBUG | Issues from LangGraph:", issues)
+    issues = result_state.get("issues", [])
+    status = result_state.get("validation_status", "PARTIAL")
+    severity = result_state.get("severity", "MEDIUM")
+    ocr_confidence = result_state.get("ocr_confidence", 0.0)
+    extracted_fields = result_state.get("extracted_fields", {})
 
-    # -----------------------------
-    # Step 4: Persist validation results
-    # -----------------------------
-    persist_validation_results(
+    # -------------------------------------------------
+    # Step 5: Persist extracted fields for case
+    # -------------------------------------------------
+    persist_case_document(
+        db=db,
+        case_id=case_id,
+        document_type=normalized_doc_type,
+        extracted_fields=extracted_fields
+    )
+
+    # -------------------------------------------------
+    # Step 6: Persist validation results
+    # -------------------------------------------------
+    validation_id = persist_validation_results(
         db=db,
         document_id=document_id,
         status=status,
@@ -71,29 +121,36 @@ async def upload_document(
         ocr_confidence=ocr_confidence,
         issues=issues
     )
-    
+
+    # -------------------------------------------------
+    # Step 7: Historical learning (positive)
+    # -------------------------------------------------
     if status == "PASS":
-      store_historical_issue_pattern(
-        db=db,
-        document_type=document_type,
-        issue_type="Resolved",
-        field_name="all",
-        resolution="User uploaded corrected document"
-      )
-       
+        store_historical_issue_pattern(
+            db=db,
+            document_type=normalized_doc_type,
+            issue_type="Resolved",
+            field_name="all",
+            resolution="Document passed validation"
+        )
+
+    # -------------------------------------------------
+    # Step 8: Persist GenAI explanations
+    # -------------------------------------------------
     persist_genai_explanations(
-    db=db,
-    validation_id=None,  # OPTIONAL: fetch latest if needed
-    issues=issues,
-    llm_model="llama3.1"
+        db=db,
+        validation_id=validation_id,
+        issues=issues,
+        llm_model="llama3.1"
     )
 
-    # -----------------------------
-    # Step 5: Return API response
-    # -----------------------------
+    # -------------------------------------------------
+    # Step 9: API response
+    # -------------------------------------------------
     return {
+        "case_id": case_id,
         "document_id": document_id,
-        "document_type": document_type,
+        "document_type": normalized_doc_type,
         "upload_status": "UPLOADED",
         "uploaded_at": datetime.utcnow(),
         "validation_summary": {
@@ -104,3 +161,5 @@ async def upload_document(
         },
         "issues": issues
     }
+
+
