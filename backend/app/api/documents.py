@@ -2,6 +2,7 @@ from fastapi import APIRouter, UploadFile, File, Form, Depends
 from datetime import datetime
 import uuid
 import os
+import shutil
 from tempfile import NamedTemporaryFile
 from sqlalchemy.orm import Session
 
@@ -55,12 +56,12 @@ async def upload_document(
     db.commit()
 
     # -------------------------------------------------
-    # Step 2: Save uploaded file to disk
+    # Step 2: Save uploaded file to disk (CRITICAL)
     # -------------------------------------------------
-    suffix = os.path.splitext(file.filename)[-1]
+    suffix = os.path.splitext(file.filename)[-1] or ".pdf"
 
     with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(await file.read())
+        shutil.copyfileobj(file.file, tmp)
         file_path = tmp.name
 
     # -------------------------------------------------
@@ -69,7 +70,7 @@ async def upload_document(
     documents_by_type = load_case_documents(db, case_id)
 
     # -------------------------------------------------
-    # Step 4: Run LangGraph
+    # Step 4: Run LangGraph pipeline
     # -------------------------------------------------
     graph = build_validation_graph()
 
@@ -78,7 +79,7 @@ async def upload_document(
         "document_id": document_id,
         "document_type": normalized_doc_type,
 
-        # ✅ CRITICAL FIX
+        # 🔑 REQUIRED FOR PyPDF
         "file_path": file_path,
 
         "extracted_fields": {},
@@ -101,7 +102,7 @@ async def upload_document(
     extracted_fields = result_state.get("extracted_fields", {})
 
     # -------------------------------------------------
-    # Step 5: Persist extracted fields for case
+    # Step 5: Persist extracted fields per case
     # -------------------------------------------------
     persist_case_document(
         db=db,
@@ -123,7 +124,7 @@ async def upload_document(
     )
 
     # -------------------------------------------------
-    # Step 7: Historical learning (positive)
+    # Step 7: Historical learning (positive cases)
     # -------------------------------------------------
     if status == "PASS":
         store_historical_issue_pattern(
@@ -161,5 +162,3 @@ async def upload_document(
         },
         "issues": issues
     }
-
-

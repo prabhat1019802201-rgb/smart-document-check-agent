@@ -8,7 +8,12 @@ from app.models import genai_explanation
 from app.models import *  # ensures models are registered
 #from app.db import init_models  # # TODO: Enable init_models when DB migrations are added
 from app.api import documents
+import logging
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(levelname)s | %(message)s"
+)
 
 app = FastAPI(
     title="Smart Document Check Agent",

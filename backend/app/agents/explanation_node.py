@@ -4,11 +4,10 @@ from app.services.historical_memory_reader import fetch_historical_context
 
 
 llm = Ollama(
-    model="llama3.1:8b",
-    base_url="http://192.168.1.22:11434",
+    model="qwen2.5:3b",
+    #base_url="http://192.168.1.22:11434",
     temperature=0.0
 )
-
 
 def explanation_node(state):
     issues = state.get("issues", [])
