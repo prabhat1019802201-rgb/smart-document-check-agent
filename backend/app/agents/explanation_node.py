@@ -8,7 +8,7 @@ from app.services.historical_memory_reader import fetch_historical_context
 #     #base_url="http://192.168.1.22:11434",
 #     temperature=0.0
 # )
-#setx GROQ_API_KEY "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"
+
 #python -m uvicorn app.main:app --reload
 
 from langchain_groq import ChatGroq
