@@ -1,52 +1,49 @@
 def validate_loan_request_form(fields: dict):
     issues = []
 
-    mandatory_fields = [
-        "applicant_name",
-        "loan_amount",
-        "loan_tenure_months",
-        "employment_type",
-        "monthly_income",
-        "residential_address"
-    ]
-
-    for field in mandatory_fields:
-        if not fields.get(field):
-            issues.append({
-                "issue_type": "Missing",
-                "field_name": field,
-                "severity": "High",
-                "why_flagged": f"{field.replace('_', ' ').title()} is mandatory for loan processing.",
-                "suggested_action": f"Provide {field.replace('_', ' ').title()} in the loan request form."
-            })
-
-    # Employment-based conditional rule
-    if fields.get("employment_type") == "Salaried" and not fields.get("company_name"):
+    if not fields.get("applicant_name"):
         issues.append({
             "issue_type": "Missing",
-            "field_name": "company_name",
+            "field_name": "applicant_name",
             "severity": "High",
-            "why_flagged": "Company name is mandatory for salaried applicants.",
-            "suggested_action": "Provide company name in the loan request form."
+            "why_flagged": "Applicant name is mandatory.",
+            "suggested_action": "Provide full legal name."
         })
 
-    # Basic numeric sanity checks
-    if fields.get("loan_amount") and fields["loan_amount"] <= 0:
+    if not fields.get("pan_number"):
+        issues.append({
+            "issue_type": "Missing",
+            "field_name": "pan_number",
+            "severity": "High",
+            "why_flagged": "PAN number is mandatory.",
+            "suggested_action": "Provide PAN number."
+        })
+
+    if not fields.get("loan_amount") or fields["loan_amount"] <= 0:
         issues.append({
             "issue_type": "Invalid",
             "field_name": "loan_amount",
             "severity": "High",
             "why_flagged": "Loan amount must be greater than zero.",
-            "suggested_action": "Enter a valid loan amount."
+            "suggested_action": "Provide valid loan amount."
         })
 
-    if fields.get("loan_tenure_months") and fields["loan_tenure_months"] <= 0:
+    if not fields.get("loan_tenure_months"):
         issues.append({
-            "issue_type": "Invalid",
+            "issue_type": "Missing",
             "field_name": "loan_tenure_months",
             "severity": "Medium",
-            "why_flagged": "Loan tenure must be a positive number of months.",
-            "suggested_action": "Enter a valid loan tenure."
+            "why_flagged": "Loan tenure is missing.",
+            "suggested_action": "Provide loan tenure in months."
+        })
+
+    if not fields.get("monthly_income") or fields["monthly_income"] <= 0:
+        issues.append({
+            "issue_type": "Invalid",
+            "field_name": "monthly_income",
+            "severity": "High",
+            "why_flagged": "Monthly income must be greater than zero.",
+            "suggested_action": "Provide valid income amount."
         })
 
     return issues

@@ -1,56 +1,87 @@
 import re
 from datetime import datetime
+from typing import Dict
 
 
-CIBIL_SCORE_REGEX = r"(CIBIL\s*Score|Score)\s*[:\-]?\s*(\d{3})"
-DATE_REGEX = r"(\d{2}[\/\-]\d{2}[\/\-]\d{4})"
-PAN_REGEX = r"[A-Z]{5}[0-9]{4}[A-Z]"
-
-
-def parse_cibil_fields(raw_text: str) -> dict:
+def parse_cibil_fields(raw_text: str) -> Dict:
     """
-    Best-effort parser for CIBIL report using raw PDF text.
-    This parser is intentionally conservative.
+    Parse structured fields from CIBIL credit report text.
+
+    Expected output schema (USED BY VALIDATOR):
+    {
+        "cibil_score": int,
+        "report_date": date,
+        "name": str,
+        "pan_number": str
+    }
     """
 
-    extracted = {}
+    fields: Dict = {}
 
     if not raw_text:
-        return extracted
+        return fields
 
-    # -----------------------------
-    # 1. CIBIL Score
-    # -----------------------------
-    score_match = re.search(CIBIL_SCORE_REGEX, raw_text, re.IGNORECASE)
+    text = raw_text.replace("\n", " ")
+
+    # --------------------------------------------------
+    # 1. CIBIL SCORE
+    # Example:
+    #   CIBIL SCORE
+    #   785
+    # --------------------------------------------------
+    score_match = re.search(
+        r"CIBIL\s*SCORE\s*(\d{3})",
+        raw_text,
+        re.IGNORECASE
+    )
     if score_match:
-        extracted["cibil_score"] = int(score_match.group(2))
+        try:
+            fields["cibil_score"] = int(score_match.group(1))
+        except ValueError:
+            pass
 
-    # -----------------------------
-    # 2. Report Date
-    # -----------------------------
-    date_match = re.search(DATE_REGEX, raw_text)
+    # --------------------------------------------------
+    # 2. REPORT DATE
+    # Example:
+    #   As of Date: 15-01-2026
+    # --------------------------------------------------
+    date_match = re.search(
+        r"As\s*of\s*Date\s*[:\-]?\s*(\d{2}-\d{2}-\d{4})",
+        raw_text,
+        re.IGNORECASE
+    )
     if date_match:
         try:
-            extracted["report_date"] = datetime.strptime(
-                date_match.group(1), "%d/%m/%Y"
+            fields["report_date"] = datetime.strptime(
+                date_match.group(1), "%d-%m-%Y"
             ).date()
         except ValueError:
             pass
 
-    # -----------------------------
-    # 3. PAN Number (optional)
-    # -----------------------------
-    pan_match = re.search(PAN_REGEX, raw_text)
+    # --------------------------------------------------
+    # 3. FULL NAME
+    # Example:
+    #   Full Name: Rajesh Kumar Sharma
+    # --------------------------------------------------
+    name_match = re.search(
+        r"Full\s*Name\s*[:\-]?\s*([A-Za-z ]{3,})",
+        text,
+        re.IGNORECASE
+    )
+    if name_match:
+        fields["name"] = name_match.group(1).strip()
+
+    # --------------------------------------------------
+    # 4. PAN NUMBER
+    # Example:
+    #   PAN Number: BFGPS1234K
+    # --------------------------------------------------
+    pan_match = re.search(
+        r"PAN\s*Number\s*[:\-]?\s*([A-Z]{5}[0-9]{4}[A-Z])",
+        text,
+        re.IGNORECASE
+    )
     if pan_match:
-        extracted["pan_number"] = pan_match.group(0)
+        fields["pan_number"] = pan_match.group(1)
 
-    # -----------------------------
-    # 4. Name (weak heuristic)
-    # -----------------------------
-    lines = raw_text.splitlines()
-    for line in lines[:30]:  # only top section
-        if "name" in line.lower():
-            extracted["name"] = line.split(":")[-1].strip()
-            break
-
-    return extracted
+    return fields

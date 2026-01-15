@@ -9,6 +9,7 @@ from app.models import *  # ensures models are registered
 #from app.db import init_models  # # TODO: Enable init_models when DB migrations are added
 from app.api import documents
 import logging
+from app.api import case_qa
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -23,6 +24,7 @@ app = FastAPI(
 
 Base.metadata.create_all(bind=engine)
 app.include_router(documents.router)
+app.include_router(case_qa.router) 
 
 @app.get("/health")
 def health_check():

@@ -9,4 +9,5 @@ python-multipart
 pytesseract 
 pillow 
 pdf2image
+langchain-groq
 

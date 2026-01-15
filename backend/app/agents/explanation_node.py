@@ -1,11 +1,20 @@
-from langchain_community.llms import Ollama
 from app.agents.prompts import EXPLANATION_PROMPT
 from app.services.historical_memory_reader import fetch_historical_context
 
+# from langchain_community.llms import Ollama
 
-llm = Ollama(
-    model="qwen2.5:3b",
-    #base_url="http://192.168.1.22:11434",
+# llm = Ollama(
+#     model="qwen2.5:3b",
+#     #base_url="http://192.168.1.22:11434",
+#     temperature=0.0
+# )
+#setx GROQ_API_KEY "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"
+#python -m uvicorn app.main:app --reload
+
+from langchain_groq import ChatGroq
+
+llm = ChatGroq(
+    model="llama-3.1-8b-instant",
     temperature=0.0
 )
 
