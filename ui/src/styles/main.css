@@ -1,0 +1,37 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  margin: 0;
+}
+
+.header {
+  background: #004a8f;
+  color: white;
+  padding: 16px;
+}
+
+.container {
+  padding: 20px;
+}
+
+.card {
+  background: white;
+  padding: 16px;
+  margin-top: 16px;
+  border-radius: 6px;
+}
+
+button {
+  margin-top: 8px;
+  padding: 8px 12px;
+}
+
+.issue {
+  background: #ffe6e6;
+  padding: 6px;
+  margin-top: 6px;
+}
+
+.success {
+  color: green;
+}
