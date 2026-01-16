@@ -1,22 +1,34 @@
-export default function IssueList({ issues = [] }) {
-  if (!issues.length) return null;
+import "../styles/union-theme.css";
+
+export default function IssueList({ issues }) {
+  if (!issues || issues.length === 0) {
+    return (
+      <div className="card success-card">
+        No issues detected. Document passed validation.
+      </div>
+    );
+  }
 
   return (
-    <div style={{ marginTop: 14 }}>
-      <strong>Issues & Recommendations</strong>
+    <div className="card">
+      <div className="card-header">
+        Issues & Recommendations
+      </div>
 
-      {issues.map((i, idx) => (
-        <div key={idx} className="issue">
-          <div className="issue-field">
-            ▸ {i.field_name}
+      {issues.map((issue, idx) => (
+        <div key={idx} className="issue-block">
+          <div className="issue-title">
+            ▸ {issue.field_name.replace("_", " ").toUpperCase()}
           </div>
 
-          <div className="issue-text">
-            <strong>Why flagged:</strong> {i.why_flagged}
+          <div className="issue-section">
+            <strong>Why flagged?</strong>
+            <p>{issue.why_flagged}</p>
           </div>
 
-          <div className="issue-text">
-            <strong>Suggested Action:</strong> {i.suggested_action}
+          <div className="issue-section">
+            <strong>Suggested Action</strong>
+            <p>{issue.suggested_action}</p>
           </div>
         </div>
       ))}

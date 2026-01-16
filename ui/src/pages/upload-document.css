@@ -1,0 +1,40 @@
+.upload-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.upload-dropzone {
+  border: 2px dashed #c7d2fe;
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+  background: #f8faff;
+  margin-bottom: 16px;
+}
+
+.upload-helper {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 6px;
+}
+
+.upload-controls select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+}
+
+.upload-btn {
+  margin-top: 16px;
+  background: #5b5fc7;
+  color: #ffffff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+}

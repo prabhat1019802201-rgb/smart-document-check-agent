@@ -1,20 +1,35 @@
-import Header from "../components/Header";
-import UploadDocument from "./UploadDocument";
-import DocumentCard from "../components/DocumentCard";
+import "./case-dashboard.css";
+//import UploadDocument from "../components/UploadDocument";
+import IssueList from "../components/IssueList";
 import CaseChat from "../components/CaseChat";
+import ValidationSummary from "../components/ValidationSummary";
+import UploadDocument from "./UploadDocument";
 
 export default function CaseDashboard() {
   return (
-    <>
-      <Header caseId="LN-10234" />
+    <div className="dashboard-container">
+      <div className="dashboard-grid">
+        
+        {/* CENTER LEFT */}
+        <div className="panel left-panel">
+          <h2 className="section-title">Upload Document</h2>
+          <UploadDocument />
+        </div>
 
-      <div className="ub-container">
-        <UploadDocument />
+        {/* CENTER RIGHT */}
+        <div className="panel right-panel">
+          <h2 className="section-title">Validation Summary</h2>
+          <ValidationSummary />
+          <IssueList />
+        </div>
 
-        <DocumentCard />
+        {/* BOTTOM */}
+        <div className="panel bottom-panel">
+          <h2 className="section-title">Ask About This Case</h2>
+          <CaseChat />
+        </div>
 
-        <CaseChat />
       </div>
-    </>
+    </div>
   );
 }

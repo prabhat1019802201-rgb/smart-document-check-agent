@@ -1,10 +1,15 @@
-export default function StatusBadge({ status }) {
-  const cls =
-    status === "PASS"
-      ? "badge pass"
-      : status === "FAIL"
-      ? "badge fail"
-      : "badge partial";
+import "../styles/union-theme.css";
 
-  return <span className={`badge ${cls}`}>{status}</span>;
+export default function StatusBadge({ status }) {
+  const map = {
+    PASS: "status-pass",
+    PARTIAL: "status-partial",
+    FAIL: "status-fail"
+  };
+
+  return (
+    <span className={`status-badge ${map[status] || ""}`}>
+      {status}
+    </span>
+  );
 }

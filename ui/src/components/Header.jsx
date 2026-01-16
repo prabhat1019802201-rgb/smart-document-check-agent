@@ -1,28 +1,43 @@
 import "./header.css";
 import unionLogo from "../assets/union-bank-logo.png";
 
-export default function Header({ caseId }) {
-  const today = new Date().toLocaleDateString();
+export default function Header({ caseId, onCaseIdChange }) {
+  const today = new Date().toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 
   return (
-    <header className="ub-header">
-      <div className="ub-header-row">
-        <div className="ub-header-left">
-          <img src={unionLogo} alt="Union Bank of India" />
-        </div>
+    <header className="union-header">
+      {/* 🔹 TOP BAR */}
+      <div className="header-top">
+        <img
+          src={unionLogo}
+          alt="Union Bank of India"
+          className="bank-logo"
+        />
 
-        <div className="ub-header-center">
+        <div className="header-title">
           Smart Document Check Agent
-        </div>
-
-        <div className="ub-header-right">
-          User ▾
         </div>
       </div>
 
-      <div className="ub-header-sub">
-        <span><strong>Case ID:</strong> {caseId || "—"}</span>
-        <span><strong>Date:</strong> {today}</span>
+      {/* 🔹 LOWER BAR */}
+      <div className="header-bottom">
+        <div className="case-id-section">
+          <label>Case ID:</label>
+          <input
+            type="text"
+            placeholder="Enter Case ID"
+            value={caseId}
+            onChange={(e) => onCaseIdChange(e.target.value)}
+          />
+        </div>
+
+        <div className="date-section">
+          Date: {today}
+        </div>
       </div>
     </header>
   );
