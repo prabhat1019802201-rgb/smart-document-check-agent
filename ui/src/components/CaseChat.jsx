@@ -1,33 +1,31 @@
 import { useState } from "react";
 import { askCaseQuestion } from "../api/caseQa.api";
+import "./case-chat.css";
 
-export default function CaseChat() {
+export default function CaseChat({ caseId }) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const ask = async () => {
-    setLoading(true);
-    const res = await askCaseQuestion("LN-10234", question);
+    if (!question.trim()) return;
+    const res = await askCaseQuestion(caseId, question);
     setAnswer(res.answer);
-    setLoading(false);
   };
 
   return (
-    <div className="ub-chat">
-      <strong>Ask about this case</strong>
+    <div className="case-chat">
+      <h3>Ask about this case</h3>
 
-      <input
-        placeholder="Ask a question about uploaded documents..."
-        value={question}
-        onChange={(e) => setQuestion(e.target.value)}
-      />
+      <div className="chat-input">
+        <input
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="Ask about validation, mismatches, income…"
+        />
+        <button onClick={ask}>Ask</button>
+      </div>
 
-      <button onClick={ask} disabled={loading}>
-        {loading ? "Thinking..." : "Ask"}
-      </button>
-
-      {answer && <div className="ub-answer">{answer}</div>}
+      {answer && <div className="chat-answer">{answer}</div>}
     </div>
   );
 }

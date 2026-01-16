@@ -1,35 +1,38 @@
-import "./case-dashboard.css";
-//import UploadDocument from "../components/UploadDocument";
+import UploadDocument from "./UploadDocument";
 import IssueList from "../components/IssueList";
 import CaseChat from "../components/CaseChat";
-import ValidationSummary from "../components/ValidationSummary";
-import UploadDocument from "./UploadDocument";
+import "./case-dashboard.css";
 
 export default function CaseDashboard() {
   return (
-    <div className="dashboard-container">
+    <div className="case-dashboard">
+
+      {/* MAIN GRID */}
       <div className="dashboard-grid">
-        
-        {/* CENTER LEFT */}
-        <div className="panel left-panel">
-          <h2 className="section-title">Upload Document</h2>
+
+        {/* LEFT PANEL — Upload */}
+        <div className="dashboard-panel left-panel">
           <UploadDocument />
         </div>
 
-        {/* CENTER RIGHT */}
-        <div className="panel right-panel">
-          <h2 className="section-title">Validation Summary</h2>
-          <ValidationSummary />
-          <IssueList />
-        </div>
+        {/* RIGHT PANEL — Validation + Issues */}
+        <div className="dashboard-panel right-panel">
+          <div className="validation-card">
+            <h3>Validation Summary & Issues</h3>
 
-        {/* BOTTOM */}
-        <div className="panel bottom-panel">
-          <h2 className="section-title">Ask About This Case</h2>
-          <CaseChat />
+            <div className="validation-scroll">
+              <IssueList />
+            </div>
+          </div>
         </div>
 
       </div>
+
+      {/* BOTTOM PANEL — Q&A */}
+      <div className="dashboard-panel bottom-panel">
+        <CaseChat />
+      </div>
+
     </div>
   );
 }

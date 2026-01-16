@@ -1,0 +1,86 @@
+.issue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* =========================
+   PLACEHOLDER
+========================= */
+.issue-placeholder {
+  color: #6b7280;
+  font-style: italic;
+  padding: 20px;
+}
+
+/* =========================
+   STATUS BANNER
+========================= */
+.validation-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f3f4f6;
+  border-radius: 6px;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+}
+
+.summary-metrics span {
+  margin-left: 14px;
+  font-size: 13px;
+  color: #374151;
+}
+
+/* =========================
+   ISSUES
+========================= */
+.issues-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.issue-card {
+  border-radius: 6px;
+  padding: 12px 14px;
+  border-left: 5px solid #f59e0b;
+  background: #fff7ed;
+}
+
+.issue-card.high {
+  border-left-color: #dc2626;
+  background: #fef2f2;
+}
+
+.issue-card.medium {
+  border-left-color: #f59e0b;
+}
+
+.issue-card.low {
+  border-left-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.issue-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #111827;
+}
+
+.issue-body p {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #374151;
+}
+
+/* =========================
+   NO ISSUES
+========================= */
+.no-issues {
+  padding: 14px;
+  border-radius: 6px;
+  background: #ecfdf5;
+  color: #065f46;
+  font-weight: 500;
+}

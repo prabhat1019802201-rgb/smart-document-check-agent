@@ -1,14 +1,8 @@
-import "../styles/union-theme.css";
+import "./status-badge.css";
 
 export default function StatusBadge({ status }) {
-  const map = {
-    PASS: "status-pass",
-    PARTIAL: "status-partial",
-    FAIL: "status-fail"
-  };
-
   return (
-    <span className={`status-badge ${map[status] || ""}`}>
+    <span className={`status-badge ${status?.toLowerCase()}`}>
       {status}
     </span>
   );

@@ -1,0 +1,59 @@
+.validation-card {
+  display: flex;
+  flex-direction: column;
+  height: 420px;
+}
+
+.validation-card.empty {
+  color: #666;
+  font-style: italic;
+}
+
+/* Summary */
+.validation-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e3ea;
+  font-size: 14px;
+}
+
+/* Status colors */
+.status.pass {
+  color: #1a7f37;
+  font-weight: bold;
+}
+.status.partial {
+  color: #b54708;
+  font-weight: bold;
+}
+.status.fail {
+  color: #b42318;
+  font-weight: bold;
+}
+
+/* Issues */
+.issues-scroll {
+  margin-top: 12px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.issue-item {
+  border-left: 4px solid #6a5acd;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  background: #f8f9ff;
+  border-radius: 6px;
+}
+
+.issue-item h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+}
+
+.no-issues {
+  color: #1a7f37;
+  font-weight: 500;
+}
