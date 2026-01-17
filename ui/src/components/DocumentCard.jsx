@@ -1,26 +1,45 @@
 import StatusBadge from "./StatusBadge";
 import IssueList from "./IssueList";
+import "./validation-card.css";
 
 export default function DocumentCard({ result }) {
   if (!result) return null;
 
+  const summary = result.validation_summary;
+
   return (
-    <div className="ub-card">
-      <div className="ub-card-title">
-        {result.document_type.toUpperCase()}
+    <div className="ub-card validation-card">
+      <div className="ub-card-title">Validation Summary</div>
+
+      {/* Summary Section */}
+      <div className="validation-summary">
+        <div className="summary-row">
+          <StatusBadge status={summary.status} />
+        </div>
+
+        <div className="summary-metrics">
+          <div>
+            <span>Issues Found</span>
+            <strong>{summary.issues_found}</strong>
+          </div>
+
+          <div>
+            <span>Severity</span>
+            <strong>{summary.severity}</strong>
+          </div>
+
+          <div>
+            <span>OCR Confidence</span>
+            <strong>{summary.ocr_confidence}</strong>
+          </div>
+        </div>
       </div>
 
-      <div style={{ marginBottom: 8 }}>
-        <StatusBadge status={result.validation_summary.status} />
+      {/* Issues Section */}
+      <div className="issues-section">
+        <div className="issues-title">Issues & Recommendations</div>
+        <IssueList issues={result.issues} />
       </div>
-
-      <div style={{ fontSize: 13 }}>
-        Issues Found: {result.validation_summary.issues_found} <br />
-        Severity: {result.validation_summary.severity} <br />
-        OCR Confidence: {result.validation_summary.ocr_confidence}
-      </div>
-
-      <IssueList issues={result.issues} />
     </div>
   );
 }

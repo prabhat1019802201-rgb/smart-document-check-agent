@@ -1,59 +1,79 @@
 .validation-card {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  height: 420px;
-}
-
-.validation-card.empty {
-  color: #666;
-  font-style: italic;
 }
 
 /* Summary */
 .validation-summary {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e0e3ea;
-  font-size: 14px;
+  background: #f9fafb;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
 }
 
-/* Status colors */
-.status.pass {
-  color: #1a7f37;
-  font-weight: bold;
+.summary-row {
+  margin-bottom: 8px;
 }
-.status.partial {
-  color: #b54708;
-  font-weight: bold;
+
+.summary-metrics {
+  display: flex;
+  gap: 20px;
+  font-size: 13px;
 }
-.status.fail {
-  color: #b42318;
-  font-weight: bold;
+
+.summary-metrics div span {
+  display: block;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.summary-metrics div strong {
+  color: #111827;
 }
 
 /* Issues */
-.issues-scroll {
-  margin-top: 12px;
+.issues-section {
+  flex: 1;
   overflow-y: auto;
-  padding-right: 6px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 10px;
+}
+
+.issues-title {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+/* Issue list */
+.issue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .issue-item {
-  border-left: 4px solid #6a5acd;
-  padding: 8px 10px;
-  margin-bottom: 10px;
-  background: #f8f9ff;
+  border-left: 4px solid #f59e0b;
+  background: #fff7ed;
+  padding: 10px;
   border-radius: 6px;
 }
 
-.issue-item h4 {
-  margin: 0 0 4px 0;
-  font-size: 14px;
+.issue-header {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.issue-body {
+  font-size: 12.5px;
+  color: #374151;
 }
 
 .no-issues {
-  color: #1a7f37;
-  font-weight: 500;
+  font-size: 13px;
+  color: #065f46;
+  background: #ecfdf5;
+  padding: 10px;
+  border-radius: 6px;
 }

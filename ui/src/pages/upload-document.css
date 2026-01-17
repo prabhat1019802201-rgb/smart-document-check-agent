@@ -1,40 +1,82 @@
+/* Card container already styled via ub-card */
+
 .upload-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 20px;
   background: #ffffff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
-.upload-dropzone {
-  border: 2px dashed #c7d2fe;
-  border-radius: 8px;
-  padding: 24px;
+/* Drop zone */
+.upload-drop-zone {
+  position: relative;
+  border: 2px dashed #b6c6ff;
+  border-radius: 10px;
+  padding: 28px;
   text-align: center;
   background: #f8faff;
-  margin-bottom: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.upload-helper {
-  font-size: 13px;
+.upload-drop-zone:hover {
+  background: #f1f5ff;
+  border-color: #6d5bd0;
+}
+
+.upload-drop-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Icon + text */
+.upload-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.upload-text {
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.upload-subtext {
+  font-size: 12px;
   color: #6b7280;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
-.upload-controls select {
-  width: 100%;
+.file-name {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #4f46e5;
+  word-break: break-all;
+}
+
+/* Bottom controls */
+.upload-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.upload-row select {
+  flex: 1;
   padding: 10px;
   border-radius: 6px;
   border: 1px solid #d1d5db;
+  background: #fff;
 }
 
-.upload-btn {
-  margin-top: 16px;
-  background: #5b5fc7;
-  color: #ffffff;
-  border: none;
+.upload-row button {
   padding: 10px 18px;
   border-radius: 6px;
+  border: none;
+  background: linear-gradient(135deg, #6d5bd0, #5842c3);
+  color: #fff;
   font-weight: 500;
   cursor: pointer;
+}
+
+.upload-row button:hover {
+  opacity: 0.95;
 }
