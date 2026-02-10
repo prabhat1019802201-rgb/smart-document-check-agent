@@ -1,8 +1,8 @@
 import re
 from datetime import datetime
 
-PAN_REGEX = r"[A-Z]{5}[0-9]{4}[A-Z]"
-
+PAN_REGEX = r"\b[A-Z]{5}[0-9]{4}[A-Z]\b"
+DATE_REGEX = r"\b(\d{2}[/-]\d{2}[/-]\d{4})\b"
 
 def parse_pan_fields(raw_text: str) -> dict:
     fields = {}
@@ -10,23 +10,35 @@ def parse_pan_fields(raw_text: str) -> dict:
     if not raw_text:
         return fields
 
+    text = raw_text.upper()
+
+    # -----------------------------
     # PAN Number
-    pan_match = re.search(PAN_REGEX, raw_text)
+    # -----------------------------
+    pan_match = re.search(PAN_REGEX, text)
     if pan_match:
         fields["pan_number"] = pan_match.group(0)
 
-    # Name
-    name_match = re.search(r"Full Name:\s*(.+)", raw_text, re.IGNORECASE)
+    # -----------------------------
+    # Name (line AFTER "NAME")
+    # -----------------------------
+    name_match = re.search(r"NAME\s*\n([A-Z ]{3,})", text)
     if name_match:
-        fields["name"] = name_match.group(1).strip()
+        name = name_match.group(1).strip()
+        if len(name.split()) >= 2:
+            fields["name"] = name.title()
 
-    # DOB
-    dob_match = re.search(r"Date of Birth:\s*(\d{2}-\d{2}-\d{4})", raw_text)
+    # -----------------------------
+    # Date of Birth
+    # -----------------------------
+    dob_match = re.search(DATE_REGEX, text)
     if dob_match:
         try:
-            fields["dob"] = datetime.strptime(
-                dob_match.group(1), "%d-%m-%Y"
+            dob = datetime.strptime(
+                dob_match.group(1).replace("-", "/"),
+                "%d/%m/%Y"
             ).date()
+            fields["dob"] = dob
         except ValueError:
             pass
 

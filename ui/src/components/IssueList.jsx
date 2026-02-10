@@ -1,3 +1,4 @@
+
 export default function IssueList({ issues }) {
   if (!issues || issues.length === 0) {
     return (
@@ -12,19 +13,27 @@ export default function IssueList({ issues }) {
       {issues.map((issue) => (
         <div key={issue.issue_id} className="issue-item">
           <div className="issue-header">
-            ⚠ {issue.field_name.replace("_", " ").toUpperCase()}
+            ⚠ {(issue.field_name || "Unknown Field")
+              .replaceAll("_", " ")
+              .toUpperCase()}
           </div>
 
           <div className="issue-body">
             <p>
               <strong>Why flagged?</strong><br />
-              {issue.why_flagged}
+              {issue.why_flagged || "Reason not provided."}
             </p>
 
             <p>
               <strong>Suggested Action</strong><br />
-              {issue.suggested_action}
+              {issue.suggested_action || "No action suggested."}
             </p>
+
+            {issue.severity && (
+              <div className="issue-severity">
+                Severity: {issue.severity}
+              </div>
+            )}
           </div>
         </div>
       ))}
