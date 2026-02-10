@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./upload-document.css";
 
-export default function UploadDocument({ caseId, onCaseIdChange, onUpload }) {
+export default function UploadDocument({ caseId, onUpload }) {
   const [file, setFile] = useState(null);
   const [documentType, setDocumentType] = useState("");
 
@@ -10,8 +10,10 @@ export default function UploadDocument({ caseId, onCaseIdChange, onUpload }) {
       alert("Please select a document");
       return;
     }
+
+    // Case ID is assumed to come from Header
     if (!caseId) {
-      alert("Case ID is required");
+      alert("Please enter Case ID in the header");
       return;
     }
 
@@ -21,7 +23,7 @@ export default function UploadDocument({ caseId, onCaseIdChange, onUpload }) {
       caseId,
     });
 
-    // optional UX reset
+    // optional reset
     setFile(null);
     setDocumentType("");
   }
@@ -30,18 +32,6 @@ export default function UploadDocument({ caseId, onCaseIdChange, onUpload }) {
     <div className="ub-card upload-card">
       <div className="ub-card-title">Upload Document</div>
 
-      {/* Case ID Input */}
-      <div className="upload-row">
-        <input
-          type="text"
-          placeholder="Enter Case ID"
-          value={caseId}
-          onChange={(e) => onCaseIdChange(e.target.value)}
-          className="case-id-input"
-        />
-      </div>
-
-      {/* Upload Area */}
       <div className="upload-drop-zone">
         <div className="upload-icon">📄</div>
 
@@ -59,7 +49,6 @@ export default function UploadDocument({ caseId, onCaseIdChange, onUpload }) {
         {file && <div className="file-name">{file.name}</div>}
       </div>
 
-      {/* Document Type + Submit */}
       <div className="upload-row">
         <select
           value={documentType}
@@ -73,7 +62,9 @@ export default function UploadDocument({ caseId, onCaseIdChange, onUpload }) {
           <option value="loan_request_form">Loan Application</option>
         </select>
 
-        <button onClick={handleSubmit}>Upload & Validate</button>
+        <button onClick={handleSubmit}>
+          Upload & Validate
+        </button>
       </div>
     </div>
   );
