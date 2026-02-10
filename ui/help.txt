@@ -1,0 +1,6 @@
+1.Go to UI folder
+cd smart-document-check-agent/ui
+2.Install dependencies (only first time)
+npm Install
+3.start UI server
+npm run dev

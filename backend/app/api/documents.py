@@ -18,6 +18,9 @@ from app.services.case_document_store import (
     persist_case_document,
     load_case_documents
 )
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
+
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -148,17 +151,19 @@ async def upload_document(
     # -------------------------------------------------
     # Step 9: API response
     # -------------------------------------------------
-    return {
-        "case_id": case_id,
-        "document_id": document_id,
-        "document_type": normalized_doc_type,
-        "upload_status": "UPLOADED",
-        "uploaded_at": datetime.utcnow(),
-        "validation_summary": {
-            "status": status,
-            "issues_found": len(issues),
-            "severity": severity,
-            "ocr_confidence": ocr_confidence
-        },
-        "issues": issues
-    }
+    response = {
+      "case_id": case_id,
+      "document_id": document_id,
+      "document_type": normalized_doc_type,
+      "upload_status": "UPLOADED",
+      "uploaded_at": datetime.utcnow(),
+      "validation_summary": {
+        "status": status,
+        "issues_found": len(issues),
+        "severity": severity,
+        "ocr_confidence": ocr_confidence
+      },
+      "issues": issues
+   }
+
+    return JSONResponse(content=jsonable_encoder(response))
