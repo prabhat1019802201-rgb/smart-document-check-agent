@@ -10,7 +10,6 @@ from app.services.historical_memory_reader import fetch_historical_context
 # )
 
 
-
 from langchain_groq import ChatGroq
 
 llm = ChatGroq(
