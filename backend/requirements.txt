@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+sqlalchemy
+langgraph
+langchain
+langchain-community
+pypdf
+python-multipart
+pytesseract 
+pillow 
+pdf2image
+langchain-groq
+
