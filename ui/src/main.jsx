@@ -1,10 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import "./styles/union-theme.css";
+import { CaseProvider } from "./context/CaseContext";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
+    <CaseProvider>
+      <App />
+    </CaseProvider>
   </React.StrictMode>
 );
