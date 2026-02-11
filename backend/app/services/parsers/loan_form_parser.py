@@ -1,106 +1,83 @@
 import re
-from typing import Dict, Optional
+from datetime import datetime
 
 
-def _extract(pattern: str, text: str) -> Optional[str]:
-    match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
-    if match:
-        return match.group(1).strip()
-    return None
-
-
-def _clean_amount(value: str) -> float:
-    if not value:
-        return 0.0
-
-    value = value.replace(",", "")
-    value = value.replace("=", "")
-    value = value.strip()
-
-    try:
-        return float(value)
-    except ValueError:
-        return 0.0
-
-
-def parse_loan_form_fields(raw_text: str) -> Dict:
-    """
-    Parse Loan Application / Loan Request Form
-    """
+def parse_loan_form_fields(raw_text: str) -> dict:
+    fields = {}
 
     if not raw_text:
-        return {}
+        return fields
 
-    text = raw_text.replace("\n", " ")
+    text = raw_text.upper()
 
-    extracted = {}
-
-    # --------------------------------------------------
-    # Applicant Name
-    # --------------------------------------------------
-    extracted["applicant_name"] = _extract(
-        r"Full Legal Name[:\-]?\s*([A-Z\s]+)",
-        text
+    # -------------------------
+    # APPLICANT NAME
+    # -------------------------
+    name_match = re.search(
+        r"FULL NAME.*?\n([A-Z ]+)",
+        raw_text,
+        re.IGNORECASE
     )
+    if name_match:
+        fields["applicant_name"] = name_match.group(1).strip().title()
 
-    # --------------------------------------------------
-    # PAN
-    # --------------------------------------------------
-    extracted["pan_number"] = _extract(
-        r"\b([A-Z]{5}[0-9]{4}[A-Z])\b",
-        text
+    # -------------------------
+    # DATE OF BIRTH
+    # -------------------------
+    dob_match = re.search(
+        r"(\d{2}/\d{2}/\d{4})",
+        raw_text
     )
+    if dob_match:
+        try:
+            fields["dob"] = datetime.strptime(
+                dob_match.group(1),
+                "%d/%m/%Y"
+            ).date()
+        except ValueError:
+            pass
 
-    # --------------------------------------------------
-    # Aadhaar
-    # --------------------------------------------------
-    aadhaar = _extract(
+    # -------------------------
+    # AADHAAR NUMBER
+    # -------------------------
+    aadhaar_match = re.search(
         r"(\d{4}\s\d{4}\s\d{4})",
-        text
+        raw_text
     )
-    if aadhaar:
-        extracted["aadhaar_number"] = aadhaar.replace(" ", "")
+    if aadhaar_match:
+        fields["aadhaar_number"] = aadhaar_match.group(1).replace(" ", "")
 
-    # --------------------------------------------------
-    # Loan Amount
-    # --------------------------------------------------
-    amount = _extract(
-        r"Requested Amount[:\-]?\s*=?\s*([\d,]+\.\d{2}|\d+)",
-        text
+    # -------------------------
+    # LOAN AMOUNT
+    # -------------------------
+    loan_match = re.search(
+        r"REQUESTED AMOUNT.*?([\d,\.]+)",
+        raw_text,
+        re.IGNORECASE | re.DOTALL
     )
-    extracted["loan_amount"] = _clean_amount(amount)
+    if loan_match:
+        amount = loan_match.group(1)
+        amount = amount.replace(",", "")
+        try:
+            fields["loan_amount"] = float(amount)
+        except:
+            pass
 
-    # --------------------------------------------------
-    # Tenure
-    # --------------------------------------------------
-    tenure = _extract(
-        r"Tenure\s*\(Months\)[:\-]?\s*(\d+)",
-        text
+    # -------------------------
+    # MONTHLY INCOME
+    # -------------------------
+    income_match = re.search(
+        r"MONTHLY INCOME.*?([\d,\.]+)",
+        raw_text,
+        re.IGNORECASE
     )
-    if tenure:
-        extracted["loan_tenure_months"] = int(tenure)
+    if income_match:
+        income = income_match.group(1).replace(",", "")
+        try:
+            fields["monthly_income"] = float(income)
+        except:
+            pass
 
-    # --------------------------------------------------
-    # Gross Monthly Income
-    # --------------------------------------------------
-    income = _extract(
-        r"Gross Monthly Income[:\-]?\s*([\d,]+)",
-        text
-    )
-    extracted["monthly_income"] = _clean_amount(income)
+    print("DEBUG | Parsed Loan Application fields:", fields, flush=True)
 
-    # --------------------------------------------------
-    # Employer
-    # --------------------------------------------------
-    extracted["company_name"] = _extract(
-        r"Current Employer[:\-]?\s*([A-Za-z\s&\.]+)",
-        text
-    )
-
-    # --------------------------------------------------
-    # Employment Type (derived)
-    # --------------------------------------------------
-    if extracted.get("monthly_income", 0) > 0:
-        extracted["employment_type"] = "Salaried"
-
-    return extracted
+    return fields
