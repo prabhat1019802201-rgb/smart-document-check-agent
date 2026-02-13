@@ -2,100 +2,93 @@ import re
 from datetime import datetime
 
 
+def clean_name(text: str):
+    """
+    Remove OCR garbage and keep only valid name text
+    """
+    text = re.sub(r"[^A-Za-z ]", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+
+    if len(text) < 4:
+        return None
+
+    # Reject words like DOB, GOVT, etc.
+    blacklist = ["DOB", "GOV", "INDIA", "UIDAI", "MALE", "FEMALE"]
+    if any(word in text.upper() for word in blacklist):
+        return None
+
+    return text.title()
+
+
 def parse_aadhaar_fields(raw_text: str) -> dict:
     fields = {}
 
-    if not raw_text:
-        return fields
+    lines = [l.strip() for l in raw_text.splitlines() if l.strip()]
 
-    # Normalize text
-    text = raw_text.replace("\n", " ").strip()
-    lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
-
-    # --------------------------------------------------
-    # Aadhaar Number (12 digits with optional spaces)
-    # --------------------------------------------------
-    aadhaar_match = re.search(r"\b\d{4}\s?\d{4}\s?\d{4}\b", raw_text)
+    # -------------------------
+    # Aadhaar Number
+    # -------------------------
+    aadhaar_match = re.search(r"\b(\d{4}\s?\d{4}\s?\d{4})\b", raw_text)
     if aadhaar_match:
-        fields["aadhaar_number"] = re.sub(r"\s+", "", aadhaar_match.group())
+        fields["aadhaar_number"] = aadhaar_match.group(1).replace(" ", "")
 
-    # --------------------------------------------------
-    # Date of Birth (supports multiple patterns)
-    # --------------------------------------------------
-    dob_match = re.search(
-        r"\b(\d{2}[\/\-]\d{2}[\/\-]\d{4})\b",
-        raw_text
-    )
+    # -------------------------
+    # DOB
+    # -------------------------
+    dob_match = re.search(r"(\d{2}[\/\-]\d{2}[\/\-]\d{4})", raw_text)
     if dob_match:
         try:
             fields["dob"] = datetime.strptime(
-                dob_match.group(1).replace("-", "/"),
+                dob_match.group(1),
                 "%d/%m/%Y"
             ).date()
-        except ValueError:
+        except:
             pass
 
-    # --------------------------------------------------
-    # Gender (label or standalone)
-    # --------------------------------------------------
-    gender_match = re.search(
-        r"\b(MALE|FEMALE|Male|Female|Other)\b",
-        raw_text
-    )
+    # -------------------------
+    # Gender
+    # -------------------------
+    gender_match = re.search(r"\b(Male|Female|Other)\b", raw_text, re.IGNORECASE)
     if gender_match:
-        fields["gender"] = gender_match.group().capitalize()
+        fields["gender"] = gender_match.group(1).capitalize()
 
-    # --------------------------------------------------
-    # Name Extraction (Robust Logic)
-    # --------------------------------------------------
-    # Case 1: Labeled format
-    name_label_match = re.search(
-        r"Name\s*[:\-]?\s*([A-Za-z ]+)",
-        raw_text,
-        re.IGNORECASE
-    )
-    if name_label_match:
-        fields["name"] = name_label_match.group(1).strip()
-    else:
-        # Case 2: Positional format
-        # Find line containing DOB and extract name before it
-        dob_pattern = r"\d{2}[\/\-]\d{2}[\/\-]\d{4}"
-        for line in lines:
-            if re.search(dob_pattern, line):
-                parts = re.split(dob_pattern, line)
-                if parts:
-                    candidate = parts[0]
+    # -------------------------
+    # NAME EXTRACTION (BEST LOGIC)
+    # -------------------------
+    name = None
 
-                    # Remove noise
-                    candidate = re.sub(r"/000[:\s]*", "", candidate)
-                    candidate = re.sub(r"[^A-Za-z ]", "", candidate)
-                    candidate = candidate.strip()
+    # ⭐ Rule 1: First valid alphabetic line
+    for line in lines[:5]:  # Only top portion
+        candidate = clean_name(line)
+        if candidate:
+            name = candidate
+            break
 
-                    if len(candidate.split()) >= 2:
-                        fields["name"] = candidate
+    # ⭐ Rule 2: Fallback → line before DOB
+    if not name:
+        for i, line in enumerate(lines):
+            if re.search(r"\d{2}/\d{2}/\d{4}", line):
+                if i > 0:
+                    candidate = clean_name(lines[i - 1])
+                    if candidate:
+                        name = candidate
                         break
 
-    # --------------------------------------------------
-    # Address Extraction
-    # --------------------------------------------------
-    # Look for "Address" label first
-    address_match = re.search(
-        r"Address\s*[:\-]?\s*(.*?)(\d{6})",
+    if name:
+        fields["name"] = name
+
+    # -------------------------
+    # Address
+    # -------------------------
+    addr_match = re.search(
+        r"Address[:\s]*(.*?)\d{6}",
         raw_text,
         re.IGNORECASE | re.DOTALL
     )
-    if address_match:
-        address = address_match.group(1)
-        address = re.sub(r"\s+", " ", address).strip()
+    if addr_match:
+        address = re.sub(r"\s+", " ", addr_match.group(1)).strip()
+        address = re.sub(r"[-,]+$", "", address).strip()
         fields["address"] = address
-    else:
-        # Fallback: find 6-digit pincode line
-        pincode_match = re.search(r"\b\d{6}\b", raw_text)
-        if pincode_match:
-            pin_index = raw_text.find(pincode_match.group())
-            snippet = raw_text[max(0, pin_index - 150):pin_index]
-            snippet = re.sub(r"\s+", " ", snippet).strip()
-            fields["address"] = snippet
 
     print("DEBUG | Parsed Aadhaar fields:", fields, flush=True)
 
