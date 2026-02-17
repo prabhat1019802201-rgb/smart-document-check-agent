@@ -1,130 +1,206 @@
 import re
-from datetime import datetime
 from typing import Dict, Optional
 
 
-def _clean_amount(value: str) -> float:
+# ---------------------------------------------------------
+# TEXT NORMALIZATION
+# ---------------------------------------------------------
+def _normalize_text(text: str) -> str:
     """
-    Convert amounts like:
-    - 85,000.00
-    - ₹22,80,000
-    - 2280000
-    into float
+    Clean OCR noise while preserving structure.
     """
-    if not value:
-        return 0.0
+    if not text:
+        return ""
 
-    value = value.replace(",", "")
-    value = value.replace("₹", "")
-    value = value.strip()
+    text = text.replace("\r", "\n")
 
-    try:
-        return float(value)
-    except ValueError:
-        return 0.0
+    # Remove repeated spaces
+    text = re.sub(r"[ \t]+", " ", text)
+
+    # Remove strange OCR symbols
+    text = re.sub(r"[^\x00-\x7F₹\n.,:/()-]", " ", text)
+
+    return text
 
 
-def _extract(pattern: str, text: str) -> Optional[str]:
-    match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+def _lines(text: str):
+    return [l.strip() for l in text.split("\n") if l.strip()]
+
+
+# ---------------------------------------------------------
+# GENERIC AMOUNT EXTRACTOR (STRICT)
+# ---------------------------------------------------------
+def _extract_amounts(line: str):
+    """
+    Extract only valid currency numbers.
+    Avoid picking IDs, years, etc.
+    """
+    matches = re.findall(r"₹?\s?([\d,]+\.\d{2})", line)
+    values = []
+
+    for m in matches:
+        try:
+            values.append(float(m.replace(",", "")))
+        except Exception:
+            pass
+
+    return values
+
+
+# ---------------------------------------------------------
+# PAN EXTRACTION
+# ---------------------------------------------------------
+def _extract_pan(text: str) -> Optional[str]:
+    match = re.search(r"\b[A-Z]{5}[0-9]{4}[A-Z]\b", text.upper())
+    return match.group(0) if match else None
+
+
+# ---------------------------------------------------------
+# NAME EXTRACTION (FROM CERTIFICATE TEXT)
+# Example:
+# "This is to certify that Mr. Prabhat Kumar..."
+# ---------------------------------------------------------
+def _extract_employee_name(text: str) -> Optional[str]:
+    match = re.search(
+        r"(Mr\.?|Ms\.?|Mrs\.?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})",
+        text,
+        re.IGNORECASE,
+    )
     if match:
-        return match.group(1).strip()
+        return match.group(2).strip()
+
     return None
 
 
+# ---------------------------------------------------------
+# COMPANY EXTRACTION
+# ---------------------------------------------------------
+def _extract_company(lines) -> Optional[str]:
+    """
+    Look for Pvt Ltd / Limited etc.
+    """
+    for line in lines:
+        if re.search(r"(PVT|PRIVATE|LIMITED|LTD)", line.upper()):
+            return line.strip()
+
+    return None
+
+
+# ---------------------------------------------------------
+# SALARY TABLE PARSING
+# ---------------------------------------------------------
+def _extract_salary_components(lines):
+    """
+    Extract structured salary rows like:
+    Basic Salary ........ ₹25,000.00
+    HRA ................. ₹10,000.00
+    Net Salary .......... ₹42,800.00
+    """
+
+    basic = hra = gross = net = None
+
+    for line in lines:
+        upper = line.upper()
+
+        values = _extract_amounts(line)
+        if not values:
+            continue
+
+        amount = values[0]
+
+        if "BASIC" in upper:
+            basic = amount
+
+        elif "HRA" in upper:
+            hra = amount
+
+        elif "GROSS" in upper:
+            gross = amount
+
+        elif "NET" in upper or "TAKE HOME" in upper or "IN HAND" in upper:
+            net = amount
+
+    return basic, hra, gross, net
+
+
+# ---------------------------------------------------------
+# FALLBACK: FIND ISOLATED "MONTHLY" SENTENCE
+# ---------------------------------------------------------
+def _extract_inline_monthly_income(text: str) -> Optional[float]:
+    """
+    Handles narrative certificates:
+    "His monthly salary is ₹42,800.00"
+    """
+    match = re.search(
+        r"(monthly\s+(net|salary|income)[^\d]{0,10})(₹?\s?[\d,]+\.\d{2})",
+        text,
+        re.IGNORECASE,
+    )
+    if match:
+        values = _extract_amounts(match.group(0))
+        if values:
+            return values[0]
+
+    return None
+
+
+# ---------------------------------------------------------
+# MAIN PARSER
+# ---------------------------------------------------------
 def parse_income_proof_fields(raw_text: str) -> Dict:
     """
-    Parse salary slip / income proof documents.
-    Works for:
-    - OCR PDFs
-    - HTML-based PDFs
-    - Text-based PDFs
+    Primary parser used by extraction node.
     """
 
-    if not raw_text:
-        return {}
+    text = _normalize_text(raw_text)
+    lines = _lines(text)
 
-    text = raw_text.replace("\n", " ")
+    fields = {
+        "income_proof_type": "salary_certificate",
+    }
 
-    extracted = {}
+    # -----------------------------
+    # Identity Information
+    # -----------------------------
+    name = _extract_employee_name(text)
+    if name:
+        fields["employee_name"] = name
 
-    # --------------------------------------------------
-    # Document type
-    # --------------------------------------------------
-    if re.search(r"payslip|salary slip", text, re.IGNORECASE):
-        extracted["income_proof_type"] = "salary_slip"
-        extracted["employment_status"] = "Salaried"
-    else:
-        extracted["income_proof_type"] = "unknown"
+    company = _extract_company(lines)
+    if company:
+        fields["company_name"] = company
 
-    # --------------------------------------------------
-    # Employee name
-    # --------------------------------------------------
-    extracted["employee_name"] = _extract(
-        r"Employee Name[:\-]?\s*([A-Za-z\s]+)",
-        text
-    )
+    pan = _extract_pan(text)
+    if pan:
+        fields["pan_number"] = pan
 
-    # --------------------------------------------------
-    # Employer / Company name
-    # (usually appears at top in caps)
-    # --------------------------------------------------
-    company_match = re.search(
-        r"^([A-Z][A-Z\s&\.]{5,})",
-        raw_text.strip(),
-        re.MULTILINE
-    )
-    if company_match:
-        extracted["company_name"] = company_match.group(1).strip()
+    # -----------------------------
+    # Salary Extraction
+    # -----------------------------
+    basic, hra, gross, net = _extract_salary_components(lines)
 
-    # --------------------------------------------------
-    # PAN number
-    # --------------------------------------------------
-    extracted["pan_number"] = _extract(
-        r"\b([A-Z]{5}[0-9]{4}[A-Z])\b",
-        text
-    )
+    # fallback if structured rows missing
+    if not net:
+        net = _extract_inline_monthly_income(text)
 
-    # --------------------------------------------------
-    # Payslip month / year
-    # --------------------------------------------------
-    month_year = _extract(
-        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})",
-        text
-    )
-    if month_year:
-        extracted["pay_period"] = month_year
+    # -----------------------------
+    # BUSINESS RULE (IMPORTANT)
+    # 👉 Take Monthly Net as FINAL income
+    # -----------------------------
+    final_income = net or gross or basic
 
-    # --------------------------------------------------
-    # Salary components
-    # --------------------------------------------------
-    basic_salary = _extract(
-        r"Basic Salary\s*([\d,]+\.\d{2}|\d+)",
-        text
-    )
-    hra = _extract(
-        r"HRA\s*([\d,]+\.\d{2}|\d+)",
-        text
-    )
+    if basic:
+        fields["basic_salary"] = basic
 
-    extracted["basic_salary"] = _clean_amount(basic_salary)
-    extracted["hra"] = _clean_amount(hra)
+    if hra:
+        fields["hra"] = hra
 
-    # --------------------------------------------------
-    # Gross income (calculated)
-    # --------------------------------------------------
-    gross_income = extracted["basic_salary"] + extracted["hra"]
+    if gross:
+        fields["gross_income"] = gross
 
-    if gross_income > 0:
-        extracted["gross_income"] = gross_income
+    if final_income:
+        fields["net_income"] = final_income
 
-    # --------------------------------------------------
-    # Net income (optional)
-    # --------------------------------------------------
-    net_income = _extract(
-        r"Net\s*Salary\s*([\d,]+\.\d{2}|\d+)",
-        text
-    )
-    if net_income:
-        extracted["net_income"] = _clean_amount(net_income)
+    print("DEBUG | Parsed Income Proof fields:", fields, flush=True)
 
-    return extracted
+    return fields

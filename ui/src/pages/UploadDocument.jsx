@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./upload-document.css";
+
 
 export default function UploadDocument({ caseId, onUpload }) {
   const [file, setFile] = useState(null);
   const [documentType, setDocumentType] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   function handleSubmit() {
     if (!file) {
@@ -16,6 +18,11 @@ export default function UploadDocument({ caseId, onUpload }) {
       alert("Please enter Case ID in the header");
       return;
     }
+    setIsProcessing(true);
+
+    if (onUpload?.onProcessingChange) {
+     onUpload.onProcessingChange(true);
+    }
 
     onUpload({
       file,
@@ -26,9 +33,21 @@ export default function UploadDocument({ caseId, onUpload }) {
     // optional reset
     setFile(null);
     setDocumentType("");
+
+    // Simulate completion when parent updates (fallback safety)
+    // Parent can control this properly if needed.
+    setTimeout(() => {
+       setIsProcessing(false);
+       if (onUpload?.onProcessingChange) {
+       onUpload.onProcessingChange(false);
+      }
+     }, 10000); 
+
   }
 
   return (
+
+   
     <div className="ub-card upload-card">
       <div className="ub-card-title">Upload Document</div>
 
@@ -62,10 +81,21 @@ export default function UploadDocument({ caseId, onUpload }) {
           <option value="loan_request_form">Loan Application</option>
         </select>
 
-        <button onClick={handleSubmit}>
+        <button onClick={handleSubmit} disabled={isProcessing}>
           Upload & Validate
         </button>
       </div>
+           {isProcessing && (
+             <div className="processing-overlay">
+             <div className="processing-box">
+             <div className="processing-spinner"></div>
+             <div className="processing-text">
+                 Processing document… Running OCR & validations
+             </div>
+             </div>
+             </div>
+           )}
     </div>
   );
 }
+
