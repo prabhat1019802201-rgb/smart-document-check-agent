@@ -5,6 +5,8 @@ from app.services.income_rules import validate_income_proof
 from app.services.loan_rules import validate_loan_request_form
 
 
+
+
 def validation_node(state):
     document_type = state.get("document_type")
     fields = state.get("extracted_fields", {})
