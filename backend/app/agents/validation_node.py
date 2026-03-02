@@ -5,11 +5,11 @@ from app.services.income_rules import validate_income_proof
 from app.services.loan_rules import validate_loan_request_form
 
 
-
-
 def validation_node(state):
-    document_type = state.get("document_type")
+    document_type = (state.get("document_type") or "").lower()
     fields = state.get("extracted_fields", {})
+
+    print("DEBUG | validation_node document_type:", document_type)
 
     issues = []
 
@@ -25,7 +25,6 @@ def validation_node(state):
     elif document_type == "income_proof":
         issues = validate_income_proof(fields)
 
-    # ✅ THIS WAS MISSING
     elif document_type in ["loan_request_form", "loan_application_form"]:
         issues = validate_loan_request_form(fields)
 
@@ -39,14 +38,19 @@ def validation_node(state):
         })
 
     # --------------------------------------------------
-    # Set overall status
+    # Set overall status safely
     # --------------------------------------------------
     if not issues:
         state["validation_status"] = "PASS"
         state["severity"] = "LOW"
     else:
         state["validation_status"] = "PARTIAL"
-        state["severity"] = max(i["severity"] for i in issues)
+
+        # Safe severity handling
+        severity_levels = {"LOW": 1, "Medium": 2, "MEDIUM": 2, "High": 3, "HIGH": 3}
+        max_issue = max(issues, key=lambda x: severity_levels.get(x.get("severity", "LOW"), 1))
+        state["severity"] = max_issue.get("severity", "LOW")
 
     state["issues"] = issues
+
     return state

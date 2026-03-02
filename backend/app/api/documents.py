@@ -18,6 +18,12 @@ from app.services.case_document_store import (
     persist_case_document,
     load_case_documents
 )
+
+
+# ✅ NEW IMPORT for document classification
+from app.services.extraction.pdf_text_extractor import extract_text_from_pdf
+from app.services.classifier.document_classifier import detect_document_type
+
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
@@ -28,7 +34,7 @@ router = APIRouter(prefix="/documents", tags=["Documents"])
 @router.post("/upload")
 async def upload_document(
     file: UploadFile = File(...),
-    document_type: str | None = Form(default=None),
+    document_type: str | None = Form(default=None),  # kept for fallback/debugging
     case_id: str | None = Form(default=None),
     db: Session = Depends(get_db)
 ):
@@ -47,11 +53,11 @@ async def upload_document(
     )
 
     # -------------------------------------------------
-    # Step 1: Persist document metadata
+    # Step 1: Persist document metadata (initial save)
     # -------------------------------------------------
     doc = Document(
         document_id=document_id,
-        document_type=normalized_doc_type,
+        document_type=normalized_doc_type,  # will update after classification
         file_name=file.filename,
         upload_status="UPLOADED"
     )
@@ -59,13 +65,36 @@ async def upload_document(
     db.commit()
 
     # -------------------------------------------------
-    # Step 2: Save uploaded file to disk (CRITICAL)
+    # Step 2: Save uploaded file to disk
     # -------------------------------------------------
     suffix = os.path.splitext(file.filename)[-1] or ".pdf"
 
     with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         shutil.copyfileobj(file.file, tmp)
         file_path = tmp.name
+
+    print(f"DEBUG | file_path: {file_path}", flush=True)
+
+    # -------------------------------------------------
+    # Step 2.5: AUTO CLASSIFY DOCUMENT (NEW FEATURE)
+    # -------------------------------------------------
+    try:
+        raw_text = extract_text_from_pdf(file_path)
+
+        detected_doc_type = detect_document_type(raw_text)
+
+        print(f"DEBUG | Auto-detected document type: {detected_doc_type}", flush=True)
+
+        # Override UI selection if classifier is confident
+        if detected_doc_type:
+            normalized_doc_type = detected_doc_type
+
+            # Update DB record with correct type
+            doc.document_type = normalized_doc_type
+            db.commit()
+
+    except Exception as e:
+        print(f"DEBUG | Document classification failed: {e}", flush=True)
 
     # -------------------------------------------------
     # Step 3: Load existing case documents
@@ -82,7 +111,7 @@ async def upload_document(
         "document_id": document_id,
         "document_type": normalized_doc_type,
 
-        # 🔑 REQUIRED FOR PyPDF
+        # Required for extraction layer
         "file_path": file_path,
 
         "extracted_fields": {},
@@ -152,18 +181,18 @@ async def upload_document(
     # Step 9: API response
     # -------------------------------------------------
     response = {
-      "case_id": case_id,
-      "document_id": document_id,
-      "document_type": normalized_doc_type,
-      "upload_status": "UPLOADED",
-      "uploaded_at": datetime.utcnow(),
-      "validation_summary": {
-        "status": status,
-        "issues_found": len(issues),
-        "severity": severity,
-        "ocr_confidence": ocr_confidence
-      },
-      "issues": issues
-   }
+        "case_id": case_id,
+        "document_id": document_id,
+        "document_type": normalized_doc_type,
+        "upload_status": "UPLOADED",
+        "uploaded_at": datetime.utcnow(),
+        "validation_summary": {
+            "status": status,
+            "issues_found": len(issues),
+            "severity": severity,
+            "ocr_confidence": ocr_confidence
+        },
+        "issues": issues
+    }
 
     return JSONResponse(content=jsonable_encoder(response))
