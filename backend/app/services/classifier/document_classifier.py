@@ -12,6 +12,40 @@ def detect_document_type(raw_text: str) -> str:
     text = _normalize(raw_text)
 
     # ---------------------------------------------------
+    # Loan Application (CHECK FIRST)
+    # ---------------------------------------------------
+    if (
+        "LOAN APPLICATION FORM" in text
+        or "REQUESTED AMOUNT" in text
+        or "LOAN TENURE" in text
+        or "APPLICANT PRIMARY INFORMATION" in text
+        or "INTEREST RATE PREFERENCE" in text
+    ):
+        return "loan_application_form"
+
+    # ---------------------------------------------------
+    # CIBIL
+    # ---------------------------------------------------
+    if (
+        "CIBIL SCORE" in text
+        or "TRANSUNION" in text
+        or "CIBIL REPORT" in text
+    ):
+        return "cibil"
+
+    # ---------------------------------------------------
+    # Income Proof
+    # ---------------------------------------------------
+    if (
+        "SALARY CERTIFICATE" in text
+        or "THIS IS TO CERTIFY" in text
+        or "EMPLOYEE ID" in text
+        or "MONTHLY EARNINGS" in text
+        or "GROSS SALARY" in text
+    ):
+        return "income_proof"
+
+    # ---------------------------------------------------
     # Aadhaar
     # ---------------------------------------------------
     if (
@@ -35,37 +69,5 @@ def detect_document_type(raw_text: str) -> str:
         )
     ):
         return "pan"
-
-    # ---------------------------------------------------
-    # CIBIL
-    # ---------------------------------------------------
-    if (
-        "CIBIL SCORE" in text
-        or "TRANSUNION" in text
-        or "CIBIL REPORT" in text
-    ):
-        return "cibil"
-
-    # ---------------------------------------------------
-    # Income Proof
-    # ---------------------------------------------------
-    if (
-        "SALARY CERTIFICATE" in text
-        or "THIS IS TO CERTIFY" in text
-        or "MONTHLY EARNINGS" in text
-        or "EMPLOYEE ID" in text
-    ):
-        return "income_proof"
-
-    # ---------------------------------------------------
-    # Loan Application (LAST)
-    # ---------------------------------------------------
-    if (
-        "LOAN APPLICATION FORM" in text
-        or "REQUESTED AMOUNT" in text
-        or "LOAN TENURE" in text
-        or "INTEREST RATE PREFERENCE" in text
-    ):
-        return "loan_application_form"
 
     return "unknown"
