@@ -30,6 +30,18 @@ from fastapi.responses import JSONResponse
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
 
+# -------------------------------------------------
+# REQUIRED DOCUMENT CHECKLIST (NEW FEATURE)
+# -------------------------------------------------
+REQUIRED_DOCUMENTS = {
+    "aadhaar",
+    "pan",
+    "cibil",
+    "income_proof",
+    "loan_application_form"
+}
+
+
 @router.post("/upload")
 async def upload_document(
     files: List[UploadFile] = File(...),
@@ -41,7 +53,7 @@ async def upload_document(
     responses = []
 
     # -------------------------------------------------
-    # Case ID creation
+    # Create Case ID if not provided
     # -------------------------------------------------
     if not case_id:
         case_id = str(uuid.uuid4())
@@ -73,7 +85,7 @@ async def upload_document(
         db.commit()
 
         # -------------------------------------------------
-        # Step 2: Save uploaded file
+        # Step 2: Save uploaded file to disk
         # -------------------------------------------------
         suffix = os.path.splitext(file.filename)[-1] or ".pdf"
 
@@ -84,7 +96,7 @@ async def upload_document(
         print(f"DEBUG | file_path: {file_path}", flush=True)
 
         # -------------------------------------------------
-        # Step 3: Auto classify document
+        # Step 3: AUTO CLASSIFY DOCUMENT
         # -------------------------------------------------
         try:
             raw_text = extract_text_from_pdf(file_path)
@@ -182,7 +194,7 @@ async def upload_document(
         )
 
         # -------------------------------------------------
-        # Step 10: Store response for this file
+        # Step 10: Store response for this document
         # -------------------------------------------------
         responses.append({
             "document_id": document_id,
@@ -200,12 +212,34 @@ async def upload_document(
         })
 
     # -------------------------------------------------
-    # Final API response
+    # Step 11: Detect uploaded documents
+    # -------------------------------------------------
+    uploaded_doc_types = {r["document_type"] for r in responses}
+
+    # -------------------------------------------------
+    # Step 12: Detect missing documents
+    # -------------------------------------------------
+    missing_documents = list(REQUIRED_DOCUMENTS - uploaded_doc_types)
+
+    case_status = "COMPLETE"
+
+    if missing_documents:
+        case_status = "INCOMPLETE"
+
+    # -------------------------------------------------
+    # Step 13: Final API response
     # -------------------------------------------------
     return JSONResponse(
         content=jsonable_encoder({
             "case_id": case_id,
+            "case_status": case_status,
+
             "documents_processed": len(responses),
+
+            "uploaded_documents": list(uploaded_doc_types),
+
+            "missing_documents": missing_documents,
+
             "results": responses
         })
     )
