@@ -2,82 +2,70 @@ import re
 
 
 def _normalize(text: str) -> str:
-    """
-    Normalize OCR/PDF text for consistent keyword detection.
-    """
     if not text:
         return ""
     return re.sub(r"\s+", " ", text).upper()
 
 
 def detect_document_type(raw_text: str) -> str:
-    """
-    Deterministic document classifier using strong keyword fingerprinting.
-    Order of checks is CRITICAL to avoid misclassification.
-    """
 
     text = _normalize(raw_text)
 
     # ---------------------------------------------------
-    # Aadhaar Detection (Strong Identity Markers)
+    # Aadhaar
     # ---------------------------------------------------
     if (
-        "UNIQUE IDENTIFICATION AUTHORITY OF INDIA" in text
-        or "AADHAAR" in text
-        or "UIDAI" in text
+        re.search(r"\b\d{4}\s\d{4}\s\d{4}\b", text)
+        and (
+            "AADHAAR" in text
+            or "UNIQUE IDENTIFICATION AUTHORITY OF INDIA" in text
+            or "VID" in text
+        )
     ):
         return "aadhaar"
 
     # ---------------------------------------------------
-    # PAN Detection (PAN Pattern is Highly Reliable)
+    # PAN
     # ---------------------------------------------------
     if (
-        "INCOME TAX DEPARTMENT" in text
-        or "PERMANENT ACCOUNT NUMBER" in text
-        or re.search(r"\b[A-Z]{5}[0-9]{4}[A-Z]\b", text)
+        re.search(r"\b[A-Z]{5}[0-9]{4}[A-Z]\b", text)
+        and (
+            "INCOME TAX DEPARTMENT" in text
+            or "PERMANENT ACCOUNT NUMBER" in text
+        )
     ):
         return "pan"
 
     # ---------------------------------------------------
-    # CIBIL Detection  ✅ MUST COME BEFORE LOAN
+    # CIBIL
     # ---------------------------------------------------
     if (
-        "CIBIL" in text
+        "CIBIL SCORE" in text
         or "TRANSUNION" in text
-        or "CIBIL SCORE" in text
-        or "SCORE RANGES FROM 300 TO 900" in text
+        or "CIBIL REPORT" in text
     ):
         return "cibil"
 
     # ---------------------------------------------------
-    # Income Proof Detection
+    # Income Proof
     # ---------------------------------------------------
     if (
-        "THIS IS TO CERTIFY" in text
-        or "EMPLOYEE ID" in text
+        "SALARY CERTIFICATE" in text
+        or "THIS IS TO CERTIFY" in text
         or "MONTHLY EARNINGS" in text
-        or "SALARY" in text
+        or "EMPLOYEE ID" in text
     ):
         return "income_proof"
 
     # ---------------------------------------------------
-    # Loan Application Detection (Use Multi-key Match)
-    # Avoid false positives from financial documents
+    # Loan Application (LAST)
     # ---------------------------------------------------
-    loan_keywords = [
-        "LOAN APPLICATION",
-        "REQUESTED AMOUNT",
-        "LOAN TENURE",
-        "EMPLOYMENT & INCOME",
-        "PURPOSE",
-    ]
-
-    matches = sum(1 for kw in loan_keywords if kw in text)
-
-    if matches >= 2:
+    if (
+        "LOAN APPLICATION FORM" in text
+        or "REQUESTED AMOUNT" in text
+        or "LOAN TENURE" in text
+        or "INTEREST RATE PREFERENCE" in text
+    ):
         return "loan_application_form"
 
-    # ---------------------------------------------------
-    # Unknown
-    # ---------------------------------------------------
     return "unknown"
