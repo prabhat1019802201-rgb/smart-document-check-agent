@@ -2,92 +2,138 @@ import re
 from datetime import datetime
 
 
-def clean_name(text: str):
+def _normalize(text: str) -> str:
+    if not text:
+        return ""
+    return re.sub(r"\s+", " ", text)
+
+
+def _extract_aadhaar_number(text: str):
     """
-    Remove OCR garbage and keep only valid name text
+    Extract Aadhaar number while ignoring VID numbers.
     """
-    text = re.sub(r"[^A-Za-z ]", "", text)
-    text = re.sub(r"\s+", " ", text).strip()
 
-    if len(text) < 4:
-        return None
+    candidates = re.finditer(r"\b\d{4}\s\d{4}\s\d{4}\b", text)
 
-    # Reject words like DOB, GOVT, etc.
-    blacklist = ["DOB", "GOV", "INDIA", "UIDAI", "MALE", "FEMALE"]
-    if any(word in text.upper() for word in blacklist):
-        return None
+    for match in candidates:
+        number = match.group()
+        start = match.start()
 
-    return text.title()
+        # Look at nearby text
+        context = text[max(0, start-20): start+20].upper()
+
+        # Skip if part of VID
+        if "VID" in context:
+            continue
+
+        return number.replace(" ", "")
+
+    return None
+
+
+def _extract_dob(text: str):
+    """
+    Extract DOB only from DOB marker.
+    """
+    match = re.search(r"DOB\s*[:\-]?\s*(\d{2}/\d{2}/\d{4})", text.upper())
+    if match:
+        try:
+            return datetime.strptime(match.group(1), "%d/%m/%Y").date()
+        except:
+            pass
+    return None
+
+
+def _extract_gender(text: str):
+    text = text.upper()
+
+    if "MALE" in text:
+        return "Male"
+    if "FEMALE" in text:
+        return "Female"
+
+    return None
+
+
+def _extract_name(lines):
+    """
+    UIDAI Aadhaar normally prints:
+    Hindi Name
+    English Name
+    """
+    for i, line in enumerate(lines):
+
+        if "DOB" in line.upper():
+            # Name is usually above DOB line
+            if i >= 1:
+                name = lines[i-1].strip()
+
+                if (
+                    len(name) > 2
+                    and not any(x in name.upper() for x in ["ENROLMENT", "GOVERNMENT", "AADHAAR"])
+                ):
+                    return name.title()
+
+    return None
+
+
+def _extract_address(text: str):
+    """
+    Extract address block starting from 'Address'
+    """
+    match = re.search(
+        r"ADDRESS\s*[:\-]?\s*(.+?)(\d{6})",
+        text.upper(),
+        re.DOTALL,
+    )
+
+    if match:
+        addr = match.group(1) + " " + match.group(2)
+        return addr.replace("\n", " ").title()
+
+    return None
 
 
 def parse_aadhaar_fields(raw_text: str) -> dict:
-    fields = {}
 
+    text = _normalize(raw_text)
     lines = [l.strip() for l in raw_text.splitlines() if l.strip()]
+
+    fields = {}
 
     # -------------------------
     # Aadhaar Number
     # -------------------------
-    aadhaar_match = re.search(r"\b(\d{4}\s?\d{4}\s?\d{4})\b", raw_text)
-    if aadhaar_match:
-        fields["aadhaar_number"] = aadhaar_match.group(1).replace(" ", "")
+    aadhaar = _extract_aadhaar_number(text)
+    if aadhaar:
+        fields["aadhaar_number"] = aadhaar
 
     # -------------------------
     # DOB
     # -------------------------
-    dob_match = re.search(r"(\d{2}[\/\-]\d{2}[\/\-]\d{4})", raw_text)
-    if dob_match:
-        try:
-            fields["dob"] = datetime.strptime(
-                dob_match.group(1),
-                "%d/%m/%Y"
-            ).date()
-        except:
-            pass
+    dob = _extract_dob(text)
+    if dob:
+        fields["dob"] = dob
 
     # -------------------------
     # Gender
     # -------------------------
-    gender_match = re.search(r"\b(Male|Female|Other)\b", raw_text, re.IGNORECASE)
-    if gender_match:
-        fields["gender"] = gender_match.group(1).capitalize()
+    gender = _extract_gender(text)
+    if gender:
+        fields["gender"] = gender
 
     # -------------------------
-    # NAME EXTRACTION (BEST LOGIC)
+    # Name
     # -------------------------
-    name = None
-
-    # ⭐ Rule 1: First valid alphabetic line
-    for line in lines[:5]:  # Only top portion
-        candidate = clean_name(line)
-        if candidate:
-            name = candidate
-            break
-
-    # ⭐ Rule 2: Fallback → line before DOB
-    if not name:
-        for i, line in enumerate(lines):
-            if re.search(r"\d{2}/\d{2}/\d{4}", line):
-                if i > 0:
-                    candidate = clean_name(lines[i - 1])
-                    if candidate:
-                        name = candidate
-                        break
-
+    name = _extract_name(lines)
     if name:
         fields["name"] = name
 
     # -------------------------
     # Address
     # -------------------------
-    addr_match = re.search(
-        r"Address[:\s]*(.*?)\d{6}",
-        raw_text,
-        re.IGNORECASE | re.DOTALL
-    )
-    if addr_match:
-        address = re.sub(r"\s+", " ", addr_match.group(1)).strip()
-        address = re.sub(r"[-,]+$", "", address).strip()
+    address = _extract_address(raw_text)
+    if address:
         fields["address"] = address
 
     print("DEBUG | Parsed Aadhaar fields:", fields, flush=True)

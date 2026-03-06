@@ -1,53 +1,44 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import "./upload-document.css";
 
-
 export default function UploadDocument({ caseId, onUpload }) {
-  const [file, setFile] = useState(null);
-  const [documentType, setDocumentType] = useState("");
+  const [files, setFiles] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
   function handleSubmit() {
-    if (!file) {
-      alert("Please select a document");
+    if (!files || files.length === 0) {
+      alert("Please select document(s)");
       return;
     }
 
-    // Case ID is assumed to come from Header
     if (!caseId) {
       alert("Please enter Case ID in the header");
       return;
     }
+
     setIsProcessing(true);
 
     if (onUpload?.onProcessingChange) {
-     onUpload.onProcessingChange(true);
+      onUpload.onProcessingChange(true);
     }
 
     onUpload({
-      file,
-      documentType,
+      files,
       caseId,
     });
 
-    // optional reset
-    setFile(null);
-    setDocumentType("");
+    setFiles([]);
 
-    // Simulate completion when parent updates (fallback safety)
-    // Parent can control this properly if needed.
     setTimeout(() => {
-       setIsProcessing(false);
-       if (onUpload?.onProcessingChange) {
-       onUpload.onProcessingChange(false);
-      }
-     }, 10000); 
+      setIsProcessing(false);
 
+      if (onUpload?.onProcessingChange) {
+        onUpload.onProcessingChange(false);
+      }
+    }, 10000);
   }
 
   return (
-
-   
     <div className="ub-card upload-card">
       <div className="ub-card-title">Upload Document</div>
 
@@ -61,41 +52,36 @@ export default function UploadDocument({ caseId, onUpload }) {
 
         <input
           type="file"
+          multiple
           accept=".pdf,.png,.jpg,.jpeg"
-          onChange={(e) => setFile(e.target.files[0])}
+          onChange={(e) => setFiles(e.target.files)}
         />
 
-        {file && <div className="file-name">{file.name}</div>}
+        {files && files.length > 0 && (
+          <div className="file-name">
+            {Array.from(files).map((f, i) => (
+              <div key={i}>{f.name}</div>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="upload-row">
-        <select
-          value={documentType}
-          onChange={(e) => setDocumentType(e.target.value)}
-        >
-          <option value="">Select Document Type</option>
-          <option value="aadhaar">Aadhaar</option>
-          <option value="pan">PAN</option>
-          <option value="cibil">CIBIL</option>
-          <option value="income_proof">Income Proof</option>
-          <option value="loan_request_form">Loan Application</option>
-        </select>
-
+      <div className="upload-row" style={{ justifyContent: "center" }}>
         <button onClick={handleSubmit} disabled={isProcessing}>
           Upload & Validate
         </button>
       </div>
-           {isProcessing && (
-             <div className="processing-overlay">
-             <div className="processing-box">
-             <div className="processing-spinner"></div>
-             <div className="processing-text">
-                 Processing document… Running OCR & validations
-             </div>
-             </div>
-             </div>
-           )}
+
+      {isProcessing && (
+        <div className="processing-overlay">
+          <div className="processing-box">
+            <div className="processing-spinner"></div>
+            <div className="processing-text">
+              Processing document… Running OCR & validations
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
